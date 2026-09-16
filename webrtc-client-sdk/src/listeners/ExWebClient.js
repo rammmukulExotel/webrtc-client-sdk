@@ -67,14 +67,42 @@ class ExDelegationHandler {
     constructor(exClient) {
         this.exClient = exClient;
         this.sessionCallback = exClient.sessionCallback;
+        this._listeners = new Map();
     }
+
+    /**
+     * Attach a handler for a delegation event.
+     * @param {string} event
+     * @param {Function} handler
+     * @returns {Function} unsubscribe
+     */
+    attach(event, handler) {
+        if (!this._listeners.has(event)) {
+            this._listeners.set(event, new Set());
+        }
+        this._listeners.get(event).add(handler);
+        return () => this._listeners.get(event)?.delete(handler);
+    }
+
+    emit(event, ...args) {
+        this._listeners.get(event)?.forEach((h) => {
+            try {
+                h(...args);
+            } catch (e) {
+                logger.error(`[ExDelegationHandler] handler error for ${event}`, e);
+            }
+        });
+    }
+
     setTestingMode(mode) {
         logger.log("delegationHandler: setTestingMode\n");
+        this.emit("testing-mode", mode);
     }
     onCallStatSipJsSessionEvent(ev) {
         logger.log("delegationHandler: onCallStatSipJsSessionEvent", ev);
         this.sessionCallback.initializeSession(ev, this.exClient.callFromNumber);
         this.sessionCallback.triggerSessionCallback();
+        this.emit("call-stat-sipjs-session", ev);
     }
     sendWebRTCEventsToFSM(eventType, sipMethod) {
         logger.log("ExWebClient:ExDelegationHandler: sendWebRTCEventsToFSM event " + eventType  + " " + sipMethod);
@@ -85,6 +113,7 @@ class ExDelegationHandler {
         } else if (sipMethod == "CALL") {
             this.exClient.callEventCallback(eventType, this.exClient.callFromNumber, this.exClient.call);
         }
+        this.emit("webrtc-fsm-event", eventType, sipMethod);
     }
     onWebSocketDisconnect(error) {
         logger.log("ExWebClient: onWebSocketDisconnect:", error);
@@ -105,57 +134,73 @@ class ExDelegationHandler {
     }
     playBeepTone() {
         logger.log("delegationHandler: playBeepTone\n");
+        this.emit("play-beep-tone");
     }
     onStatPeerConnectionIceGatheringStateChange(iceGatheringState) {
         logger.log("delegationHandler: onStatPeerConnectionIceGatheringStateChange\n");
         this.sessionCallback.initializeSession(`ice_gathering_state_${iceGatheringState}`, this.exClient.callFromNumber);
         this.sessionCallback.triggerSessionCallback();
+        this.emit("ice-gathering-state-change", iceGatheringState);
     }
     onCallStatIceCandidate(ev, icestate) {
         logger.log("delegationHandler: onCallStatIceCandidate\n");
+        this.emit("ice-candidate", ev, icestate);
     }
     onCallStatNegoNeeded(icestate) {
         logger.log("delegationHandler: onCallStatNegoNeeded\n");
+        this.emit("negotiation-needed", icestate);
     }
     onCallStatSignalingStateChange(cstate) {
         logger.log("delegationHandler: onCallStatSignalingStateChange\n");
+        this.emit("signaling-state-change", cstate);
     }
     onStatPeerConnectionIceConnectionStateChange(iceConnectionState) {
         logger.log("delegationHandler: onStatPeerConnectionIceConnectionStateChange\n");
         this.sessionCallback.initializeSession(`ice_connection_state_${iceConnectionState}`, this.exClient.callFromNumber);
         this.sessionCallback.triggerSessionCallback();
+        this.emit("ice-connection-state-change", iceConnectionState);
     }
-    onStatPeerConnectionConnectionStateChange() {
+    onStatPeerConnectionConnectionStateChange(connectionState) {
         logger.log("delegationHandler: onStatPeerConnectionConnectionStateChange\n");
+        this.emit("connection-state-change", connectionState);
     }
     onGetUserMediaSuccessCallstatCallback() {
         logger.log("delegationHandler: onGetUserMediaSuccessCallstatCallback\n");
+        this.emit("get-user-media-success");
     }
     onGetUserMediaErrorCallstatCallback() {
         logger.log("delegationHandler: onGetUserMediaErrorCallstatCallback\n");
         this.sessionCallback.initializeSession(`media_permission_denied`, this.exClient.callFromNumber);
         this.sessionCallback.triggerSessionCallback();
+        this.emit("get-user-media-error");
     }
     onCallStatAddStream() {
         logger.log("delegationHandler: onCallStatAddStream\n");
+        this.emit("add-stream");
     }
     onCallStatRemoveStream() {
         logger.log("delegationHandler: onCallStatRemoveStream\n");
+        this.emit("remove-stream");
     }
     setWebRTCFSMMapper(stack) {
         logger.log("delegationHandler: setWebRTCFSMMapper : Initialisation complete \n");
+        this.emit("webrtc-fsm-mapper", stack);
     }
-    onCallStatSipJsTransportEvent() {
+    onCallStatSipJsTransportEvent(ev) {
         logger.log("delegationHandler: onCallStatSipJsTransportEvent\n");
+        this.emit("sipjs-transport", ev);
     }
-    onCallStatSipSendCallback() {
+    onCallStatSipSendCallback(tsipData, sipStack) {
         logger.log("delegationHandler: onCallStatSipSendCallback\n");
+        this.emit("sip-send", tsipData, sipStack);
     }
-    onCallStatSipRecvCallback() {
+    onCallStatSipRecvCallback(tsipData, sipStack) {
         logger.log("delegationHandler: onCallStatSipRecvCallback\n");
+        this.emit("sip-recv", tsipData, sipStack);
     }
     stopCallStat() {
         logger.log("delegationHandler: stopCallStat\n");
+        this.emit("stop-call-stat");
     }
     onRecieveInvite(incomingSession) {
         logger.log("delegationHandler: onRecieveInvite\n");
@@ -179,24 +224,31 @@ class ExDelegationHandler {
             }
         }
         CallDetails.sipHeaders = result;
+        this.emit("receive-invite", incomingSession);
     }
     onPickCall() {
         logger.log("delegationHandler: onPickCall\n");
+        this.emit("pick-call");
     }
     onRejectCall() {
         logger.log("delegationHandler: onRejectCall\n");
+        this.emit("reject-call");
     }
     onCreaterAnswer() {
         logger.log("delegationHandler: onCreaterAnswer\n");
+        this.emit("create-answer");
     }
     onSettingLocalDesc() {
         logger.log("delegationHandler: onSettingLocalDesc\n");
+        this.emit("setting-local-desc");
     }
     initGetStats(pc, callid, username) {
         logger.log("delegationHandler: initGetStats\n");
+        this.emit("init-get-stats", pc, callid, username);
     }
     onRegisterWebRTCSIPEngine(engine) {
         logger.log("delegationHandler: onRegisterWebRTCSIPEngine, engine=\n", engine);
+        this.emit("engine-selected", engine);
     }
 }
 
@@ -331,7 +383,8 @@ class ExotelWebClient {
         }
 
         // Initialize the phone with SIP engine
-        this.webrtcSIPPhone.registerPhone("sipjs", new ExDelegationHandler(this), this.sipAccountInfo.enableAutoAudioDeviceChangeHandling);
+        this.delegationHandler = new ExDelegationHandler(this);
+        this.webrtcSIPPhone.registerPhone("sipjs", this.delegationHandler, this.sipAccountInfo.enableAutoAudioDeviceChangeHandling);
 
         // Create call instance after phone is initialized
         if (!this.call) {
@@ -436,6 +489,20 @@ class ExotelWebClient {
         this.eventListener = eventListener;
     };
 
+    /**
+     * Attach a handler for stats / peer-connection / SIP delegation events.
+     * Must be called after initWebrtc (or initialize). Returns unsubscribe fn.
+     * @param {string} event
+     * @param {Function} handler
+     * @returns {Function|undefined}
+     */
+    attachEventHandler = (event, handler) => {
+        if (!this.delegationHandler) {
+            logger.warn("ExWebClient: attachEventHandler: delegationHandler not initialized");
+            return;
+        }
+        return this.delegationHandler.attach(event, handler);
+    };
 
     /**
      * Event listener for registration, any change in registration state will trigger the callback here
@@ -659,12 +726,13 @@ class ExotelWebClient {
 
         
         var synchronousHandler = new ExSynchronousHandler();
-        var delegationHandler = new ExDelegationHandler(this);
+        // Reuse handler from initWebrtc when present so attachEventHandler listeners survive.
+        this.delegationHandler = this.delegationHandler || new ExDelegationHandler(this);
 
         var userName = this.userName;
 
 
-        //this.webrtcSIPPhone.registerPhone("sipjs", delegationHandler, this.sipAccountInfo.enableAutoAudioDeviceChangeHandling);
+        //this.webrtcSIPPhone.registerPhone("sipjs", this.delegationHandler, this.sipAccountInfo.enableAutoAudioDeviceChangeHandling);
         this.webrtcSIPPhone.registerWebRTCClient(this.sipAccntInfo, synchronousHandler);
         phonePool[this.userName] = this.webrtcSIPPhone;     
 
