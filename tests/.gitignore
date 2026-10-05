@@ -1,0 +1,8 @@
+node_modules/
+.env
+test-results/
+playwright-report/
+blob-report/
+harness/vendor/
+*.log
+harness/debug-sip.json

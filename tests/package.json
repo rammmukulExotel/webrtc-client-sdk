@@ -1,0 +1,21 @@
+{
+  "name": "webrtc-sdk-parity-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebRTC SDK parity E2E suite (Playwright + harness)",
+  "scripts": {
+    "prepare:harness": "node scripts/prepare-harness.js",
+    "pretest": "npm run prepare:harness",
+    "test": "playwright test",
+    "test:auto": "mode=auto playwright test",
+    "test:full": "mode=full playwright test",
+    "test:headed": "mode=full playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^20.11.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.4.0"
+  }
+}

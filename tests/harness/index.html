@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC SDK Parity Harness</title>
+    <style>
+      body {
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        margin: 1.5rem;
+        background: #0f1419;
+        color: #e7ecf1;
+      }
+      #status {
+        white-space: pre-wrap;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        background: #1a222c;
+        padding: 1rem;
+        border-radius: 8px;
+      }
+      #manual-confirm {
+        display: none;
+        margin: 1rem 0;
+        padding: 1rem 1.25rem;
+        border: 1px solid #3d7eff;
+        border-radius: 8px;
+        background: #152033;
+      }
+      #manual-confirm.visible {
+        display: block;
+      }
+      #manual-confirm h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+      }
+      #manual-confirm ol {
+        margin: 0 0 1rem 1.2rem;
+        padding: 0;
+      }
+      #manual-confirm button {
+        font-size: 1rem;
+        padding: 0.55rem 1.2rem;
+        border: 0;
+        border-radius: 6px;
+        background: #3d7eff;
+        color: #fff;
+        cursor: pointer;
+      }
+      #manual-confirm button:hover {
+        background: #5b91ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebRTC SDK Parity Harness</h1>
+    <p id="ready">Loading SDK…</p>
+    <div id="manual-confirm" aria-live="polite">
+      <h2 id="manual-confirm-title">Manual step</h2>
+      <ol id="manual-confirm-steps"></ol>
+      <button id="manual-confirm-btn" type="button">Confirm done</button>
+    </div>
+    <pre id="status"></pre>
+    <script src="vendor/exotelsdk.js"></script>
+    <script src="harness.js"></script>
+  </body>
+</html>
